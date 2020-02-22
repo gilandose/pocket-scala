@@ -1,34 +1,69 @@
 package io
 
 import conf.PocketConf
-import sttp.client._
+import io.circe.Decoder
+import io.circe.parser._
+import model.PocketResponse
+import io.circe.generic.auto._
+import transform.map.{DetailTypeQueryStringMapper, TagQueryStringMapper}
 
-class Reader(
-              consumerKey: String,
-              accessToken: String
-            ) {
+/**
+ * Class for reading articles from Pocket
+ * @param requestSender To send the request to Pocket
+ */
+class Reader(requestSender: RequestSender) {
 
-  def read: Unit = {
+  /**
+   * Function to read articles from Pocket
+   * @param tag Which tags to filter the articles on
+   * @param detailType Which level of detail is required
+   * @return PocketResponse A list of articles read from Pocket
+   */
+  def read(
+            tag: Option[String] = None,
+            detailType: Option[String] = None
+          ): PocketResponse = {
 
-    val request = basicRequest.get(
-      uri"https://getpocket.com/v3/get?consumer_key=$consumerKey&access_token=$accessToken")
+    val response = requestSender.get(
+      Seq(DetailTypeQueryStringMapper.map(detailType), TagQueryStringMapper.map(tag))
+    )
 
-    request.header("Content-Type", "application/json")
+    val parsedResponse = for {
+      rawResponse <- response.body
+      parsedResponse <- decoder[PocketResponse](rawResponse)
+    } yield parsedResponse
 
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
-    val response = request.send()
-
-    // response.header(...): Option[String]
-    println(response.header("Content-Length"))
-
-    // response.unsafeBody: by default read into a String
-    println(response)
+    parsedResponse match {
+      case Left(sadError) =>
+        println(sadError)
+        throw new RuntimeException()
+      case Right(happyResponse) => happyResponse
+    }
   }
 
+  /**
+   * Function to decode the response from Pocket into a Scala case class
+   * @param json The json returned from the request
+   * @tparam A Type to decode to
+   * @return Decoded JSON
+   */
+  def decoder[A: Decoder](json: String): Either[io.circe.Error, A] = {
+    decode[A](json)
+  }
 }
 
+/**
+ * Companion factory object
+ */
 object Reader {
+
+  /**
+   * Function to create a new instance of Reader
+   * @param conf Conf values
+   * @return A new instance of Reader
+   */
   def apply(conf: PocketConf): Reader = {
-    new Reader(conf.consumerKey, conf.accessToken)
+    val requestSender = new RequestSender(conf)
+    new Reader(requestSender)
   }
 }
