@@ -9,21 +9,20 @@ import sttp.model.StatusCode
 
 class Reader_UnitTest extends AnyFunSuite with Matchers {
 
-  test("Program flow should execute as expected") {
-    val requestSender = mock[RequestSender]
+  test("Malformed body causes error") {
+    //val requestSender = mock[RequestSender]
     val otherWayToMock = new Requester[Seq[String],Responsey]{
-      override def get(options: Seq[String]): Responsey = Response(Right(""),StatusCode.Ok)} {}
-    val reader = new Reader(requestSender)
+      override def get(options: Seq[String]): Responsey = Response(Right(""),StatusCode.Ok)}
+    val reader = new Reader(otherWayToMock)
 
 
 
     val x: Either[String,String] = Right("")
 
-    when(requestSender.get(Seq("", "&tag=_untagged_"))).thenReturn(Response(Right(""),StatusCode.Ok))
+    //when(requestSender.get(Seq("", "&tag=_untagged_"))).thenReturn(Response(Right(""),StatusCode.Ok))
     //when(mockRequestResponse.body.flatMap(_: Either[String, String])).thenReturn(ArgumentMatchers.any[Either[String, String]] => ArgumentMatchers.anyString)
 
-    reader.read(Some("_untagged_"))
+    assertThrows[RuntimeException]{reader.read(Some("_untagged_"))}
 
-    verify(requestSender, times(1)).get(Seq("", "&tag=_untagged_"))
   }
 }
