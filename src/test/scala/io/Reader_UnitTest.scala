@@ -15,6 +15,8 @@ class Reader_UnitTest extends AnyFunSuite with Matchers {
       override def get(options: Seq[String]): Responsey = Response(Right(""),StatusCode.Ok)}
     val reader = new Reader(otherWayToMock)
 
+    val x: (String, String) = ("","")
+    val  uniqueId,  tableName = x
 
 
     val x: Either[String,String] = Right("")
